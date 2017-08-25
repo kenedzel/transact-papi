@@ -1,0 +1,19 @@
+{
+    "inputMessageMetadata": {
+        "messagePayload": {
+            "connectorName": "#_custom_mule_metadata_type_#",
+            "typeId": "microservice_out"
+        },
+        "flowVariables": {
+            "payloadVariable": {}
+        }
+    },
+    "outputMessageMetadata": {
+        "messagePayload": {
+            "connectorName": "#_custom_mule_metadata_type_#",
+            "typeId": "transact_in"
+        }
+    },
+    "id": "49adc2b3-29cc-442f-89b9-d0150733b078",
+    "version": "5.2.0.0"
+}

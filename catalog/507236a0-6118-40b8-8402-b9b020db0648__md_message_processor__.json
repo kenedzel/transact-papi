@@ -1,0 +1,22 @@
+{
+    "inputMessageMetadata": {
+        "messagePayload": {
+            "connectorName": "#_custom_mule_metadata_type_#",
+            "typeId": "transact_in"
+        }
+    },
+    "outputMessageMetadata": {
+        "messagePayload": {
+            "connectorName": "#_custom_mule_metadata_type_#",
+            "typeId": "transact_out"
+        },
+        "flowVariables": {
+            "put_out": {
+                "connectorName": "#_custom_mule_metadata_type_#",
+                "typeId": "transact_in"
+            }
+        }
+    },
+    "id": "507236a0-6118-40b8-8402-b9b020db0648",
+    "version": "5.2.0.0"
+}

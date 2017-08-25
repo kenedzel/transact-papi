@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/apikit" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/apikit http://www.mulesoft.org/schema/mule/apikit/current/mule-apikit.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
+    <spring:beans>
+        <context:property-placeholder location="classpath:config.properties" order="1" />
+    </spring:beans>
+    <configuration doc:name="configuration">
+    	<expression-language>
+    		<global-functions>
+    			def getCode(val) {
+    				return val.substring(4, val.length())
+    			}
+    			
+    			def getNumber(val) {
+    				return val.substring(0, 4)
+    			}
+    		</global-functions>
+    	</expression-language>
+    </configuration>
+    <http:listener-config name="api-httpListenerConfig" host="${config.host}" port="${config.port}" doc:name="HTTP Listener Configuration"/>
+    <apikit:config name="api-config" raml="api.raml" consoleEnabled="false" doc:name="Router"/>
+    <http:request-config name="TransactionSystem" host="${config.sapi.host}" port="${config.sapi.port}" doc:name="HTTP Request Configuration" basePath="${config.sapi.path}"/>
+    <file:connector name="File" outputPattern="out" writeToDirectory="/home/kenneth/Documents/mule/destination" autoDelete="false" streaming="true" validateConnections="true" doc:name="File" outputAppend="true"/>
+    <flow name="api-main">
+        <http:listener config-ref="api-httpListenerConfig" path="${config.path}" doc:name="HTTP"/>
+        <set-property propertyName="Content-Type" value="application/json"
+					mimeType="application/json" doc:name="Request as JSON" />
+        <apikit:router config-ref="api-config" doc:name="APIkit Router"/>
+        <exception-strategy ref="Custom_Exception" doc:name="Reference Exception Strategy"/>
+    </flow>
+    <flow name="api-console">
+        <http:listener config-ref="api-httpListenerConfig" path="/console/*" doc:name="HTTP"/>
+        <apikit:console config-ref="api-config" doc:name="APIkit Console"/>
+    </flow>
+    <flow name="put:/transaction/{id}:api-config">
+        <dw:transform-message doc:name="Transform Message" metadata:id="507236a0-6118-40b8-8402-b9b020db0648">
+            <dw:input-payload mimeType="application/json"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	id: payload.id,
+	transactionName: payload.transactionNumber
+++ payload.transactionCode,
+	referenceNumber: payload.referenceNumber
+++ payload.referenceCode,
+	accountNumber: payload.accountNumber
+++ payload.accountCode
+}]]></dw:set-payload>
+            <dw:set-variable variableName="put_out"><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	id: payload.id,
+	transactionCode: payload.transactionCode,
+	transactionNumber: payload.transactionNumber,
+	referenceCode: payload.referenceCode,
+	referenceNumber: payload.referenceNumber,
+	accountCode: payload.accountCode,
+	accountNumber: payload.accountNumber
+}]]></dw:set-variable>
+        </dw:transform-message>
+        <http:request config-ref="TransactionSystem" path="${config.sapi.pv.id}" method="PUT" doc:name="HTTP">
+            <http:request-builder>
+                <http:uri-param paramName="id" value="#[message.inboundProperties['http.uri.params']['id']]"/>
+            </http:request-builder>
+        </http:request>
+        <set-property propertyName="Content-Type" value="application/json" mimeType="application/json" doc:name="Property"/>
+        <dw:transform-message doc:name="Transform Message" metadata:id="54449fd3-f6d3-44f9-8585-a5c70b10f7a0">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	code: payload.status_code,
+	message: payload.status_message
+}]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+    <flow name="delete:/transaction/{id}:api-config">
+        <http:request config-ref="TransactionSystem" path="${config.sapi.pv.id}" method="DELETE" doc:name="HTTP">
+            <http:request-builder>
+                <http:uri-param paramName="id" value="#[message.inboundProperties['http.uri.params']['id']]"/>
+            </http:request-builder>
+        </http:request>
+        <set-property propertyName="Content-Type" value="application/json" mimeType="application/json" doc:name="Property"/>
+        <dw:transform-message doc:name="Transform Message" metadata:id="2fef9f84-4420-4aa2-bee5-bb100bb833b8">
+            <dw:input-payload mimeType="application/json"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	code: payload.status_code,
+	message: payload.status_message
+}]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+    <flow name="get:/transaction:api-config">
+        <http:request responseTimeout="9000" config-ref="TransactionSystem" path="${config.sapi.transaction}" method="GET" doc:name="HTTP"/>
+        <set-property propertyName="Content-Type" value="application/json" mimeType="application/json" doc:name="Property"/>
+        <dw:transform-message doc:name="Transform Message" metadata:id="373e306a-8eea-40e5-99f3-483c52f93c41">
+            <dw:input-payload mimeType="application/json"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	content: payload.content map ((content , indexOfContent) -> {
+		id: content.id,
+		transactionCode: getCode(content.transactionName),
+		transactionNumber: getNumber(content.transactionName),
+		referenceCode: getCode(content.referenceNumber),
+		referenceNumber: getNumber(content.referenceNumber),
+		accountCode: getCode(content.accountNumber),
+		accountNumber: getNumber(content.accountNumber)
+	})
+}]]></dw:set-payload>
+        </dw:transform-message>
+  <!--   <foreach collection="#[payload.content]" doc:name="For Each">
+            <json:json-to-object-transformer returnClass="java.util.Map" doc:name="JSON to Object"/>
+            <logger message="#[message.payload.id]" level="INFO" doc:name="Logger"/>
+        </foreach> -->    
+    </flow>
+    <flow name="get:/transaction/{id}:api-config">
+        <http:request config-ref="TransactionSystem" path="${config.sapi.pv.id}" method="GET" doc:name="HTTP">
+            <http:request-builder>
+                <http:uri-param paramName="id" value="#[message.inboundProperties['http.uri.params']['id']]"/>
+            </http:request-builder>
+        </http:request>
+        <set-property propertyName="Content-Type" value="application/json" mimeType="application/json" doc:name="Property"/>
+        <dw:transform-message doc:name="Transform Message" metadata:id="bab3c00a-63df-45d4-8e32-debe44a383f7">
+            <dw:input-payload mimeType="application/json"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	id: payload.content.id,
+	transactionCode: getCode(payload.content.transactionName),
+	transactionNumber: getNumber(payload.content.transactionName),
+	referenceCode: getCode(payload.content.referenceNumber),
+	referenceNumber: getNumber(payload.content.referenceNumber),
+	accountCode: getCode(payload.content.accountNumber),
+	accountNumber: getNumber(payload.content.accountNumber),
+	code: "200",
+	message: "success"
+}]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+    <flow name="post:/transaction:api-config">
+        <dw:transform-message doc:name="Transform Message" metadata:id="9e5859b6-e2b2-4996-9b68-e4673074fc52">
+            <dw:input-payload mimeType="application/json"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	id: payload.id,
+	transactionName: payload.transactionNumber
+++ payload.transactionCode,
+	referenceNumber: payload.referenceNumber
+++ payload.referenceCode,
+	accountNumber: payload.accountNumber
+++ payload.accountCode
+}]]></dw:set-payload>
+            <dw:set-variable variableName="payloadVariable"><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	id: payload.id,
+	transactionCode: payload.transactionCode,
+	transactionNumber: payload.transactionNumber,
+	referenceCode: payload.referenceCode,
+	referenceNumber: payload.referenceNumber,
+	accountCode: payload.accountCode,
+	accountNumber: payload.accountNumber
+}]]></dw:set-variable>
+            <dw:set-variable variableName="post_response"><![CDATA[%dw 1.0
+%output application/json
+---
+{
+
+}]]></dw:set-variable>
+            <dw:set-variable variableName="post_out"><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	id: payload.id,
+	transactionCode: payload.transactionCode,
+	transactionNumber: payload.transactionNumber,
+	referenceCode: payload.referenceCode,
+	referenceNumber: payload.referenceNumber,
+	accountCode: payload.accountCode,
+	accountNumber: payload.accountNumber
+}]]></dw:set-variable>
+        </dw:transform-message>
+        <http:request config-ref="TransactionSystem" path="${config.sapi.transaction}" method="POST" doc:name="HTTP"/>
+        <set-property propertyName="Content-Type" value="application/json" mimeType="application/json" doc:name="Property"/>
+        <dw:transform-message doc:name="Transform Message" metadata:id="49adc2b3-29cc-442f-89b9-d0150733b078">
+            <dw:input-payload mimeType="application/json"/>
+            <dw:input-variable variableName="payloadVariable"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	id: payload.newItem.id,
+	transactionCode: getCode(payload.newItem.transactionName),
+	transactionNumber: getNumber(payload.newItem.transactionName),
+	referenceCode: getCode(payload.newItem.referenceNumber),
+	referenceNumber: getNumber(payload.newItem.referenceNumber),
+	accountCode: getCode(payload.newItem.accountNumber),
+	accountNumber: getNumber(payload.newItem.accountNumber)
+}]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+    <apikit:mapping-exception-strategy name="api-apiKitGlobalExceptionMapping">
+        <apikit:mapping statusCode="404">
+            <apikit:exception value="org.mule.module.apikit.exception.NotFoundException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Resource not found&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="405">
+            <apikit:exception value="org.mule.module.apikit.exception.MethodNotAllowedException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Method not allowed&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="415">
+            <apikit:exception value="org.mule.module.apikit.exception.UnsupportedMediaTypeException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Unsupported media type&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="406">
+            <apikit:exception value="org.mule.module.apikit.exception.NotAcceptableException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Not acceptable&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="400">
+            <apikit:exception value="org.mule.module.apikit.exception.BadRequestException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Bad request&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+    </apikit:mapping-exception-strategy>
+    <choice-exception-strategy name="Custom_Exception">
+        <catch-exception-strategy doc:name="404" when="#[message.inboundProperties.'http.status' == 404]">
+            <copy-properties propertyName="*" doc:name="Property"/>
+            <set-payload value="{
+	&quot;code&quot;: &quot;404&quot;,
+	&quot;message&quot;: &quot;Not Found&quot;
+}" doc:name="Set Payload"/>
+        </catch-exception-strategy>
+        <catch-exception-strategy doc:name="500" when="#[message.inboundProperties.'http.status' == 500]">
+            <copy-properties propertyName="*" doc:name="Property"/>
+            <set-payload value="{  &quot;code&quot;: &quot;500&quot;,  &quot;message&quot;: &quot;Internal Server Error&quot; }" doc:name="Set Payload"/>
+        </catch-exception-strategy>
+        <catch-exception-strategy doc:name="Connection Timed Out 10s" when="exception.causedBy(java.util.concurrent.TimeoutException)">
+            <set-property propertyName="http.status" doc:name="Set Status Code" value="418"/>
+            <set-property propertyName="Content-Type" value="application/json" mimeType="application/json" doc:name="Set Content Type"/>
+            <set-payload value="{  &quot;code&quot;: &quot;418&quot;,  &quot;message&quot;: &quot;I'm a teapot. Connection Timed out&quot; }" doc:name="Set Payload"/>
+            <file:outbound-endpoint path="/home/kenneth/Documents/mule/destination" connector-ref="File" responseTimeout="10000" doc:name="File"/>
+        </catch-exception-strategy>
+    </choice-exception-strategy>
+</mule>

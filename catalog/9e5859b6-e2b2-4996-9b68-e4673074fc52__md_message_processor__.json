@@ -1,0 +1,30 @@
+{
+    "inputMessageMetadata": {
+        "messagePayload": {
+            "connectorName": "#_custom_mule_metadata_type_#",
+            "typeId": "transact_in"
+        }
+    },
+    "outputMessageMetadata": {
+        "messagePayload": {
+            "connectorName": "#_custom_mule_metadata_type_#",
+            "typeId": "transact_out"
+        },
+        "flowVariables": {
+            "payloadVariable": {
+                "connectorName": "#_custom_mule_metadata_type_#",
+                "typeId": "transact_in"
+            },
+            "post_response": {
+                "connectorName": "#_custom_mule_metadata_type_#",
+                "typeId": "transact_in"
+            },
+            "post_out": {
+                "connectorName": "#_custom_mule_metadata_type_#",
+                "typeId": "transact_in"
+            }
+        }
+    },
+    "id": "9e5859b6-e2b2-4996-9b68-e4673074fc52",
+    "version": "5.2.0.0"
+}
